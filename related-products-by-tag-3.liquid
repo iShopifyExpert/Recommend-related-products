@@ -1,0 +1,63 @@
+{% comment %}
+  Configuration.
+
+  Tolerance: Float - Determinate how many tags a product should match in percent, to be eligible for being related.
+  Limit: Integer - How many related products to find.
+{% endcomment %}
+{% assign tolerance = 0.5 %}
+{% assign limit = 4 %}
+
+{% assign products = '' %}
+{% assign related_count = 0 %}
+
+{% comment %} Find products by tags {% endcomment %}
+{% for related_product in collections.all.products %}
+  {% if related_count >= limit %}{% break %}{% endif %}
+  {% if related_product.handle == product.handle %}{% continue %}{% endif %}
+
+  {% assign match_count = 0.0 %}
+
+  {% for tag in related_product.tags %}
+    {% if product.tags contains tag %}
+      {% assign match_count = match_count | plus: 1 %}
+    {% endif %}
+  {% endfor %}
+
+  {% assign match_percent = match_count | divided_by: product.tags.size %}
+  {% if match_percent >= tolerance %}
+    {% assign products = products | append: ',' | append: related_product.handle %}
+    {% assign related_count = related_count | plus: 1 %}
+  {% endif %}
+{% endfor %}
+
+{% comment %} Find products by current collection {% endcomment %}
+{% if collection %}
+  {% for related_product in collection.products %}
+    {% if related_count >= limit %}{% break %}{% endif %}
+    {% if related_product.handle == product.handle %}{% continue %}{% endif %}
+
+    {% assign products = products | append: ',' | append: related_product.handle %}
+    {% assign related_count = related_count | plus: 1 %}
+  {% endfor %}
+{% endif %}
+
+{% comment %} Fill products from "all" collection {% endcomment %}
+{% for related_product in collection.all.products %}
+  {% if related_count >= limit %}{% break %}{% endif %}
+  {% if related_product.handle == product.handle %}{% continue %}{% endif %}
+
+  {% assign products = products | append: ',' | append: related_product.handle %}
+  {% assign related_count = related_count | plus: 1 %}
+{% endfor %}
+
+{% assign products = products | remove_first: ',' | split: ',' %}
+{% if products != blank %}
+  <h2>{{ 'products.product.related.title' | t }}</h2>
+
+  <div class="row">
+    {% for product in products %}
+      {% assign related_product = all_products[product] %}
+      <div class="column small-12 medium-6 large-3">{% include 'product-item-grid' product: related_product %}</div>
+    {% endfor %}
+  </div>
+{% endif %}
